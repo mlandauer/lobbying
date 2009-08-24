@@ -23,6 +23,7 @@
 require 'rubygems'
 require 'hpricot'
 require 'open-uri'
+require 'csv'
 
 base_url = "http://lobbyists.pmc.gov.au/lobbyistsregister/index.cfm"
 
@@ -51,8 +52,8 @@ end
 
 # For each lobbyist get their clients and output the result
 # On the individual lobbyist page the whole layout is done with tables. Not pretty at all. Who wrote this?
-File.open("lobbying.csv", "w") do |f|
-  f.puts '"Business Entity Name","Trading Name",ABN,Clients'
+CSV.open("lobbying.csv", "w") do |f|
+  f <<  ["Business Entity Name", "Trading Name", "ABN", "Clients"]
   lobbyists.each do |l|
     page = get_page("#{base_url}?event=viewProfile&profileID=#{l[:profile_id]}")
     clients = []
@@ -60,8 +61,6 @@ File.open("lobbying.csv", "w") do |f|
       clients << tr.search("td")[1].inner_text.strip
     end
 
-    clients_with_quotes = clients.map{|c| "\"#{c}\""}
-    f.puts "\"#{l[:entity]}\",\"#{l[:trading_name]}\",#{l[:abn]},#{clients_with_quotes.join(',')}"
-    f.flush
+    f << [l[:entity], l[:trading_name], l[:abn]] + clients
   end
 end
