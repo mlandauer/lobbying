@@ -52,7 +52,7 @@ end
 # For each lobbyist get their clients and output the result
 # On the individual lobbyist page the whole layout is done with tables. Not pretty at all. Who wrote this?
 File.open("lobbying.csv", "w") do |f|
-  f.puts '"Business Entity Name", "Trading Name", ABN, Clients'
+  f.puts '"Business Entity Name","Trading Name",ABN,Clients'
   lobbyists.each do |l|
     page = get_page("#{base_url}?event=viewProfile&profileID=#{l[:profile_id]}")
     clients = []
@@ -61,7 +61,7 @@ File.open("lobbying.csv", "w") do |f|
     end
 
     clients_with_quotes = clients.map{|c| "\"#{c}\""}
-    f.puts "\"#{l[:entity]}\", \"#{l[:trading_name]}\", #{l[:abn]}, #{clients_with_quotes.join(', ')}"
+    f.puts "\"#{l[:entity]}\",\"#{l[:trading_name]}\",#{l[:abn]},#{clients_with_quotes.join(',')}"
     f.flush
   end
 end
