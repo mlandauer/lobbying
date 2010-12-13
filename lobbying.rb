@@ -25,42 +25,34 @@ require 'hpricot'
 require 'open-uri'
 require 'csv'
 
-base_url = "http://lobbyists.pmc.gov.au/lobbyistsregister/index.cfm"
+base_url = "http://lobbyists.pmc.gov.au/"
 
-def get_page(url)
-  sleep_time = 1
-  begin
-    Hpricot(open(url))
-  rescue OpenURI::HTTPError, Timeout::Error
-    puts "Had trouble downloading the page #{url} with the error #{$!}. retrying in #{sleep_time}s..."
-    sleep(sleep_time)
-    puts "Retrying now"
-    sleep_time *= 2
-    retry
-  end
-end
-
-page = get_page("#{base_url}?event=whoIsOnRegister")
+page = Hpricot(open("#{base_url}who_register.cfm"))
 
 lobbyists = []
-# Skip first row of table because it contains the headings
-page.search("table > tr")[1..-1].each do |row|
+page.search("table > tbody > tr").each do |row|
   td = row.search("td")
-  lobbyists << {:profile_id => td[0].at("input")["value"], :entity => (td[1]/"a").inner_text,
-    :trading_name => (td[2]/"a").inner_text, :abn => td[3].inner_text.strip}
+  lobbyists << {
+    :id => td[1].at("a")['href'][28..-1],
+    :entity_name => td[1].inner_text,
+    :trading_name => td[2].inner_text,
+    :abn => td[3].inner_text
+  }
 end
 
-# For each lobbyist get their clients and output the result
-# On the individual lobbyist page the whole layout is done with tables. Not pretty at all. Who wrote this?
 CSV.open("lobbying.csv", "w") do |f|
-  f <<  ["Business Entity Name", "Trading Name", "ABN", "Clients"]
+  f <<  ["Agency ID", "Business Entity Name", "Trading Name", "ABN", "Clients"]
+# For each lobbyist get their clients and output the result
   lobbyists.each do |l|
-    page = get_page("#{base_url}?event=viewProfile&profileID=#{l[:profile_id]}")
+    page = Hpricot(open("#{base_url}register/view_agency.cfm?id=#{l[:id]}"))
+
     clients = []
-    page.search("table")[5].search("tr")[1..-2].each do |tr|
-      clients << tr.search("td")[1].inner_text.strip
+    page.search("table > tbody > tr").each do |row|
+      td = row.search("td")
+      clients << td[1].inner_text
     end
 
-    f << [l[:entity], l[:trading_name], l[:abn]] + clients
+    #TODO: Owners and lobbyist
+    f << [l[:id], l[:entity_name], l[:trading_name], l[:abn]] + clients
   end
 end
